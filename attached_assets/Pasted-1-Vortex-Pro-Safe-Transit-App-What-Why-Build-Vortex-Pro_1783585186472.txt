@@ -1,0 +1,34 @@
+1 - Vortex Pro Safe Transit App
+What & Why
+Build Vortex Pro — Safe Transit as a brand-new, standalone web app (its own artifact, separate from any existing app), based on the uploaded HTML prototype (attached_assets/Pasted--DOCTYPE-html-html-lang-en-head-meta-charset-UTF-8-meta_1783584790148.txt). The prototype is a single raw HTML file; this task reimplements it in the project's React + Tailwind + shadcn/ui stack with a substantially polished, modern UI while keeping all the prototype's features and flows. The existing To-Do List app is also removed since it is no longer needed.
+
+Done looks like
+A new, standalone Vortex Pro web app exists as its own artifact and runs on its own preview.
+The old To-Do List app is deleted and no longer registered or served.
+Landing screen: branded splash with the "PREDICT. PREVENT. PROTECT." tagline and a slide-to-unlock ("slide for takeoff") control that transitions into the app, plus a fallback button to enter.
+App shell: a left sidebar with Dashboard, Crowd Forecast, and Live Map navigation, an always-visible red pulsing "I'm Stuck" SOS entry, and smooth page transitions.
+Dashboard: status header plus summary cards (next bus/arrival, crowd level, safety score) and a quick-route advisory callout.
+Crowd Forecast: a clean, animated bar chart of station density by hour with a Today/Tomorrow selector and a smart-tip callout.
+Live Map: a stylized map view with tappable congestion markers (high = avoid, low = safe) showing area info.
+AI Trip Assistant: a floating button that opens a chat panel; choosing a short vs long trip produces a tailored, checkable safety checklist and a safety tip.
+SOS emergency mode: a full-screen red overlay with a live "broadcasting location" indicator, nearest safe-zone card with navigate action, and quick-action tiles (call police, medical, alert parents, record audio), plus an exit control.
+UI is visibly upgraded over the prototype: cohesive color/typography system, consistent spacing, refined cards/shadows, accessible controls, hover/focus states, and it is responsive down to mobile widths.
+Out of scope
+Real backend integration (live transit data, real SOS dispatch, real geolocation) — actions can be simulated/mocked as in the prototype.
+Authentication / user accounts.
+Changes to the API Server or Canvas artifacts.
+Steps
+Scaffold new web artifact — Create Vortex Pro as a new standalone web app in the workspace (its own artifact directory, package, and preview), using the project's React + Tailwind + shadcn/ui stack.
+Remove the To-Do List app — Delete the existing to-do web artifact and unregister it so it is no longer built or served.
+Design system & shell — Establish the Vortex palette (emerald primary, dark slate sidebar, danger red), typography, and reusable card/callout styles, then build the app shell: sidebar navigation, page container with transitions, and routing between Dashboard, Forecast, and Map.
+Landing / slide-to-unlock — Build the branded landing splash with the animated slide-to-unlock control and fallback enter button that reveals the app shell.
+Dashboard page — Build the status header, summary metric cards, and quick-route advisory callout with polished visuals.
+Crowd Forecast page — Build the animated density bar chart with Today/Tomorrow selector and the smart-tip callout.
+Live Map page — Build the stylized map view with interactive congestion markers and area info popups.
+AI Trip Assistant — Build the floating action button, chat panel, trip-length selection, and the dynamic checkable safety checklist plus safety tip.
+SOS emergency mode — Build the full-screen SOS overlay with the animated broadcasting indicator, safe-zone card, emergency quick-action tiles, and exit.
+Polish & responsiveness — Refine spacing, states, icons, and animations across all screens; verify keyboard/focus accessibility and mobile responsiveness; ensure the app builds and runs cleanly.
+Relevant files
+attached_assets/Pasted--DOCTYPE-html-html-lang-en-head-meta-charset-UTF-8-meta_1783584790148.txt
+artifacts/todo-app/package.json
+artifacts/todo-app/src/components/ui/
