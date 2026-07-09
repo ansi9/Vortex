@@ -14,6 +14,8 @@ import { AiAssistant } from './components/AiAssistant';
 import Dashboard from './pages/Dashboard';
 import Forecast from './pages/Forecast';
 import Map from './pages/Map';
+import VortexVoyage from './pages/VortexVoyage';
+import AthenaShield from './pages/AthenaShield';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +34,8 @@ function AppLayout() {
           <Switch>
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/forecast" component={Forecast} />
+            <Route path="/voyage" component={VortexVoyage} />
+            <Route path="/athena" component={AthenaShield} />
             <Route path="/map" component={Map} />
             <Route path="/" component={Dashboard} />
             <Route component={NotFound} />
