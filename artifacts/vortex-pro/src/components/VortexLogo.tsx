@@ -1,10 +1,14 @@
 /**
- * Vortex brand logo — matches reference: two concentric rings + centre dot.
- * variant="light"   → white rings (for dark backgrounds, e.g. sidebar)
- * variant="dark"    → dark-green rings (for light backgrounds, e.g. landing)
+ * Vortex brand logo — spiral vortex icon matching the reference design.
+ * Two offset crescents (large dark outer + smaller lighter inner) + centre dot.
+ *
+ * variant="light"   → white/semi-white tones  (dark backgrounds, e.g. sidebar)
+ * variant="dark"    → dark-green tones         (light backgrounds, e.g. landing)
  * layout="inline"   → icon left, wordmark right (default)
- * layout="stacked"  → icon top, wordmark below (landing hero)
+ * layout="stacked"  → icon top, wordmark below  (landing hero)
  */
+import { useId } from "react";
+
 type Props = {
   variant?: "light" | "dark";
   layout?: "inline" | "stacked";
@@ -20,12 +24,16 @@ export function VortexLogo({
   iconSize = 32,
   showWordmark = true,
 }: Props) {
+  const id = useId().replace(/:/g, "");   // safe for SVG id attributes
   const isDark = variant === "dark";
 
-  // On dark bg → white; on light bg → dark green
-  const ringColor  = isDark ? "#14532d" : "#ffffff";
-  const dotColor   = isDark ? "#14532d" : "#ffffff";
-  const wordColor  = isDark ? "#14532d" : "#ffffff";
+  // colour tokens
+  // "dark" variant = green shades on a pale background (landing page)
+  // "light" variant = white shades on a dark background (sidebar)
+  const outerFill = isDark ? "#14532d" : "#ffffff";
+  const midFill   = isDark ? "#4ade80" : "rgba(255,255,255,0.60)";
+  const coreFill  = isDark ? "#14532d" : "#ffffff";
+  const wordColor = isDark ? "#14532d" : "#ffffff";
 
   const wrapClass =
     layout === "stacked"
@@ -35,50 +43,75 @@ export function VortexLogo({
   const wordStyle: React.CSSProperties =
     layout === "stacked"
       ? { fontSize: Math.round(iconSize * 0.34), letterSpacing: "0.12em" }
-      : { fontSize: Math.round(iconSize * 0.6),  letterSpacing: "-0.01em" };
+      : { fontSize: Math.round(iconSize * 0.60), letterSpacing: "-0.01em" };
 
-  // Geometry — all relative to cx=cy=R, viewBox 0 0 2R 2R
-  const R  = 20;           // canvas half-size
-  const cx = R;
-  const cy = R;
-  // outer ring stroke radius + width
-  const outerR = R - 1.5;
-  const outerSW = 2.2;
-  // inner ring
-  const innerR = R * 0.48;
-  const innerSW = 2.8;
-  // centre dot
-  const dotR = R * 0.11;
+  /**
+   * SVG geometry — viewBox 0 0 40 40, center (20,20)
+   *
+   * Technique: each crescent = a large circle MINUS a slightly offset
+   * inner circle, clipped to the main circle so the subtracted shape
+   * doesn't bleed outward.
+   *
+   * Outer crescent:
+   *   main circle  (20,20) R=18.5
+   *   subtract     (20,12) R=14   (shifted 8px toward top)
+   *   → crescent opens at the top, covering left + bottom + right
+   *
+   * Inner crescent:
+   *   main circle  (20,20) R=11.5
+   *   subtract     (22,13) R=8.5  (shifted right+up)
+   *   → crescent opens upper-right, rotated ≈30° from outer
+   *   This offset rotation is what creates the spiral/vortex depth.
+   */
+
+  // SVG circle expressed as a path so we can use fillRule="evenodd" for
+  // boolean subtraction: M cx-r cy  A r r 0 1 0 cx+r cy  A r r 0 1 0 cx-r cy  Z
+  const circlePath = (cx: number, cy: number, r: number) =>
+    `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy} Z`;
 
   return (
     <div className={wrapClass}>
-      {/* ── Icon ── */}
+      {/* ── Vortex icon ── */}
       <svg
         width={iconSize}
         height={iconSize}
-        viewBox={`0 0 ${R * 2} ${R * 2}`}
+        viewBox="0 0 40 40"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
-        style={{ flexShrink: 0 }}
+        style={{ flexShrink: 0, overflow: "visible" }}
       >
-        {/* Outer ring */}
-        <circle
-          cx={cx} cy={cy} r={outerR}
-          stroke={ringColor}
-          strokeWidth={outerSW}
-        />
-        {/* Inner ring */}
-        <circle
-          cx={cx} cy={cy} r={innerR}
-          stroke={ringColor}
-          strokeWidth={innerSW}
-        />
-        {/* Centre dot */}
-        <circle
-          cx={cx} cy={cy} r={dotR}
-          fill={dotColor}
-        />
+        <defs>
+          {/* Clip outer crescent to its bounding circle */}
+          <clipPath id={`oc-${id}`}>
+            <circle cx="20" cy="20" r="18.5" />
+          </clipPath>
+          {/* Clip inner crescent to its bounding circle */}
+          <clipPath id={`ic-${id}`}>
+            <circle cx="20" cy="20" r="11.5" />
+          </clipPath>
+        </defs>
+
+        {/* ① Outer dark crescent */}
+        <g clipPath={`url(#oc-${id})`}>
+          <path
+            fillRule="evenodd"
+            fill={outerFill}
+            d={`${circlePath(20, 20, 18.5)} ${circlePath(20, 12, 14)}`}
+          />
+        </g>
+
+        {/* ② Inner lighter crescent (rotated opening ≈30° relative to outer) */}
+        <g clipPath={`url(#ic-${id})`}>
+          <path
+            fillRule="evenodd"
+            fill={midFill}
+            d={`${circlePath(20, 20, 11.5)} ${circlePath(22, 13.5, 8.5)}`}
+          />
+        </g>
+
+        {/* ③ Centre dot */}
+        <circle cx="20" cy="20" r="3" fill={coreFill} />
       </svg>
 
       {/* ── Wordmark ── */}
