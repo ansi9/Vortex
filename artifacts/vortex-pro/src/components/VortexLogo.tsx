@@ -1,11 +1,11 @@
 /**
- * Vortex brand logo — spiral vortex icon matching the reference design.
- * Two offset crescents (large dark outer + smaller lighter inner) + centre dot.
+ * Vortex brand logo — spiral vortex with proper colour on every placement.
  *
- * variant="light"   → white/semi-white tones  (dark backgrounds, e.g. sidebar)
- * variant="dark"    → dark-green tones         (light backgrounds, e.g. landing)
- * layout="inline"   → icon left, wordmark right (default)
- * layout="stacked"  → icon top, wordmark below  (landing hero)
+ * variant="light"  → vivid greens on dark backgrounds (sidebar, headers)
+ * variant="dark"   → deep greens on light backgrounds (landing page)
+ *
+ * Both variants show the full green colour palette — the logo never goes
+ * flat white.  The wordmark stays white on dark and dark-green on light.
  */
 import { useId } from "react";
 
@@ -24,17 +24,36 @@ export function VortexLogo({
   iconSize = 32,
   showWordmark = true,
 }: Props) {
-  const id = useId().replace(/:/g, "");   // safe for SVG id attributes
-  const isDark = variant === "dark";
+  const uid = useId().replace(/:/g, "");
+  const isDark = variant === "dark"; // light background (landing)
 
-  // colour tokens
-  // "dark" variant = green shades on a pale background (landing page)
-  // "light" variant = white shades on a dark background (sidebar)
-  const outerFill = isDark ? "#14532d" : "#ffffff";
-  const midFill   = isDark ? "#4ade80" : "rgba(255,255,255,0.60)";
-  const coreFill  = isDark ? "#14532d" : "#ffffff";
+  /**
+   * Colour tokens
+   * ──────────────────────────────────────────────────────────
+   * dark variant (light background — landing page):
+   *   outer crescent  → very dark green   #0f4220 → #14532d gradient
+   *   inner crescent  → vivid mid-green   #16a34a → #22c55e gradient
+   *   centre dot      → #0f4220
+   *   wordmark        → #14532d
+   *
+   * light variant (dark background — sidebar):
+   *   outer crescent  → vivid bright green  #22c55e → #4ade80 gradient
+   *   inner crescent  → pale bright green   #86efac → #d1fae5 gradient
+   *   centre dot      → #22c55e
+   *   wordmark        → #ffffff
+   */
+  const gradOuter = isDark
+    ? { from: "#0f4220", to: "#1a6b38" }
+    : { from: "#16a34a", to: "#4ade80" };
+
+  const gradInner = isDark
+    ? { from: "#16a34a", to: "#22c55e" }
+    : { from: "#a7f3d0", to: "#ecfdf5" };
+
+  const dotFill   = isDark ? "#0f4220" : "#22c55e";
   const wordColor = isDark ? "#14532d" : "#ffffff";
 
+  // ── Layout helpers ──────────────────────────────────────
   const wrapClass =
     layout === "stacked"
       ? `flex flex-col items-center gap-3 ${className}`
@@ -45,33 +64,21 @@ export function VortexLogo({
       ? { fontSize: Math.round(iconSize * 0.34), letterSpacing: "0.12em" }
       : { fontSize: Math.round(iconSize * 0.60), letterSpacing: "-0.01em" };
 
-  /**
-   * SVG geometry — viewBox 0 0 40 40, center (20,20)
-   *
-   * Technique: each crescent = a large circle MINUS a slightly offset
-   * inner circle, clipped to the main circle so the subtracted shape
-   * doesn't bleed outward.
-   *
-   * Outer crescent:
-   *   main circle  (20,20) R=18.5
-   *   subtract     (20,12) R=14   (shifted 8px toward top)
-   *   → crescent opens at the top, covering left + bottom + right
-   *
-   * Inner crescent:
-   *   main circle  (20,20) R=11.5
-   *   subtract     (22,13) R=8.5  (shifted right+up)
-   *   → crescent opens upper-right, rotated ≈30° from outer
-   *   This offset rotation is what creates the spiral/vortex depth.
-   */
-
-  // SVG circle expressed as a path so we can use fillRule="evenodd" for
-  // boolean subtraction: M cx-r cy  A r r 0 1 0 cx+r cy  A r r 0 1 0 cx-r cy  Z
-  const circlePath = (cx: number, cy: number, r: number) =>
-    `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy} Z`;
+  // ── SVG geometry ────────────────────────────────────────
+  // Crescent = large circle MINUS a slightly offset inner circle,
+  // clipped so the subtracted circle never bleeds outside the outer ring.
+  //
+  // Outer crescent:  main (20,20) R=18.5  subtract (20,12) R=14
+  //   → C-shape opening at the top
+  //
+  // Inner crescent:  main (20,20) R=11.5  subtract (22,13.5) R=8.5
+  //   → opening rotated ~25° clockwise from outer, creating spiral depth
+  //
+  const cp = (cx: number, cy: number, r: number) =>
+    `M${cx - r} ${cy} A${r} ${r} 0 1 0 ${cx + r} ${cy} A${r} ${r} 0 1 0 ${cx - r} ${cy}Z`;
 
   return (
     <div className={wrapClass}>
-      {/* ── Vortex icon ── */}
       <svg
         width={iconSize}
         height={iconSize}
@@ -79,42 +86,50 @@ export function VortexLogo({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
-        style={{ flexShrink: 0, overflow: "visible" }}
+        style={{ flexShrink: 0 }}
       >
         <defs>
-          {/* Clip outer crescent to its bounding circle */}
-          <clipPath id={`oc-${id}`}>
+          {/* radial gradient: darker at rim, lighter near centre */}
+          <radialGradient id={`go-${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor={gradOuter.to} />
+            <stop offset="100%" stopColor={gradOuter.from} />
+          </radialGradient>
+          <radialGradient id={`gi-${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor={gradInner.to} />
+            <stop offset="100%" stopColor={gradInner.from} />
+          </radialGradient>
+
+          {/* clip to prevent crescent shapes from bleeding outward */}
+          <clipPath id={`co-${uid}`}>
             <circle cx="20" cy="20" r="18.5" />
           </clipPath>
-          {/* Clip inner crescent to its bounding circle */}
-          <clipPath id={`ic-${id}`}>
+          <clipPath id={`ci-${uid}`}>
             <circle cx="20" cy="20" r="11.5" />
           </clipPath>
         </defs>
 
-        {/* ① Outer dark crescent */}
-        <g clipPath={`url(#oc-${id})`}>
+        {/* ① Outer crescent */}
+        <g clipPath={`url(#co-${uid})`}>
           <path
             fillRule="evenodd"
-            fill={outerFill}
-            d={`${circlePath(20, 20, 18.5)} ${circlePath(20, 12, 14)}`}
+            fill={`url(#go-${uid})`}
+            d={`${cp(20, 20, 18.5)} ${cp(20, 12, 14)}`}
           />
         </g>
 
-        {/* ② Inner lighter crescent (rotated opening ≈30° relative to outer) */}
-        <g clipPath={`url(#ic-${id})`}>
+        {/* ② Inner crescent — rotated opening for spiral depth */}
+        <g clipPath={`url(#ci-${uid})`}>
           <path
             fillRule="evenodd"
-            fill={midFill}
-            d={`${circlePath(20, 20, 11.5)} ${circlePath(22, 13.5, 8.5)}`}
+            fill={`url(#gi-${uid})`}
+            d={`${cp(20, 20, 11.5)} ${cp(22, 13.5, 8.5)}`}
           />
         </g>
 
         {/* ③ Centre dot */}
-        <circle cx="20" cy="20" r="3" fill={coreFill} />
+        <circle cx="20" cy="20" r="3" fill={dotFill} />
       </svg>
 
-      {/* ── Wordmark ── */}
       {showWordmark && (
         <span
           style={{ color: wordColor, fontFamily: "Inter, sans-serif", ...wordStyle }}
