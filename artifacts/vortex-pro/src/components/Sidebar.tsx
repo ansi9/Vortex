@@ -1,6 +1,7 @@
 import { LayoutDashboard, TrendingUp, Map, AlertTriangle, Compass, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAppState } from "../context/AppContext";
+import { VortexLogo } from "./VortexLogo";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -18,9 +19,7 @@ export function Sidebar() {
     <aside className="w-[220px] bg-sidebar border-r border-sidebar-border hidden md:flex flex-col h-[100dvh] flex-shrink-0">
       {/* Logo */}
       <div className="h-16 flex items-center px-5 border-b border-white/5">
-        <div className="border-2 border-white rounded-lg px-3 py-1.5">
-          <span className="font-extrabold text-white text-lg tracking-widest">VORTEX</span>
-        </div>
+        <VortexLogo variant="light" iconSize={30} />
       </div>
 
       <nav className="flex-1 py-5 px-3 space-y-1">
