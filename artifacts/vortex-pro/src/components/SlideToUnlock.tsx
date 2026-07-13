@@ -1,107 +1,176 @@
-import { useState, useRef, useCallback } from "react";
+/**
+ * SlideToUnlock — buttery-smooth drag via direct DOM style writes.
+ * React state is only used for the unlock completion phase so the hot
+ * path (pointermove) never triggers a re-render.
+ */
+import { useRef, useCallback, useEffect } from "react";
 import { Plane } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 
-const SLIDE_THRESHOLD = 85;
-const SPRING   = "cubic-bezier(0.34, 1.28, 0.64, 1)";
-const EASE_OUT = "cubic-bezier(0.25, 0.46, 0.45, 0.94)";
-const THUMB_W  = 56;
-const PADDING  = 4; // px each side inside the track
+const THUMB_W   = 60;          // px — thumb diameter
+const PAD       = 4;           // px — inset from track edge
+const THRESHOLD = 0.85;        // 85% of travel triggers unlock
+const SNAP_DUR  = "0.45s";
+const SNAP_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";   // smooth out
+const DONE_EASE = "cubic-bezier(0.34, 1.2, 0.64, 1)"; // slight spring on complete
 
 export function SlideToUnlock() {
   const { setIsUnlocked, setShowNotifDot } = useAppState();
-  const [progress, setProgress]       = useState(0);   // 0-100
-  const [isDragging, setIsDragging]   = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Guard: only run once per interaction
+  const trackRef   = useRef<HTMLDivElement>(null);
+  const thumbRef   = useRef<HTMLButtonElement>(null);
+  const fillRef    = useRef<HTMLDivElement>(null);
+  const labelRef   = useRef<HTMLSpanElement>(null);
+  const planeRef   = useRef<SVGSVGElement>(null);
+
+  const dragging   = useRef(false);
+  const completing = useRef(false);
+  const progress   = useRef(0);          // 0-1, updated without React state
+  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── helpers ────────────────────────────────────────────────────────────
+  const maxTravel = () =>
+    (trackRef.current?.clientWidth ?? 320) - THUMB_W - PAD * 2;
+
+  /** Apply position directly to DOM — zero React overhead */
+  const applyProgress = useCallback((p: number, animated = false) => {
+    progress.current = p;
+    const travel = maxTravel();
+    const tx     = travel * p;
+    const fillW  = PAD + THUMB_W + tx;
+    const ease   = animated ? `${SNAP_DUR} ${SNAP_EASE}` : "none";
+
+    if (thumbRef.current) {
+      thumbRef.current.style.transition = animated
+        ? `transform ${ease}, box-shadow ${ease}`
+        : "none";
+      thumbRef.current.style.transform  = `translateX(${tx}px)`;
+      thumbRef.current.style.boxShadow  = p > 0.05
+        ? `0 0 ${12 + p * 16}px rgba(34,197,94,${0.3 + p * 0.4})`
+        : "";
+    }
+    if (fillRef.current) {
+      fillRef.current.style.transition = animated ? `width ${ease}` : "none";
+      fillRef.current.style.width      = `${fillW}px`;
+    }
+    if (labelRef.current) {
+      const opacity = Math.max(0, 1 - p / 0.35);
+      labelRef.current.style.opacity    = String(opacity);
+      labelRef.current.style.transition = animated ? "opacity 0.2s ease" : "none";
+    }
+    if (planeRef.current) {
+      const deg = 45 + p * 60;
+      planeRef.current.style.transform  = `rotate(${deg}deg)`;
+      planeRef.current.style.transition = animated ? `transform ${ease}` : "none";
+    }
+  }, []);
+
   const unlock = useCallback(() => {
-    if (isCompleting) return;
-    setIsCompleting(true);
-    setProgress(100);
-    // clear any stale timer before setting new one
+    if (completing.current) return;
+    completing.current = true;
+
+    // animate thumb to end with spring ease
+    const travel = maxTravel();
+    const fillW  = PAD + THUMB_W + travel;
+    const dur    = `0.42s`;
+    const ease   = DONE_EASE;
+
+    if (thumbRef.current) {
+      thumbRef.current.style.transition = `transform ${dur} ${ease}, box-shadow ${dur} ${ease}`;
+      thumbRef.current.style.transform  = `translateX(${travel}px)`;
+      thumbRef.current.style.boxShadow  = "0 0 24px rgba(34,197,94,0.7)";
+    }
+    if (fillRef.current) {
+      fillRef.current.style.transition = `width ${dur} ${ease}`;
+      fillRef.current.style.width      = `${fillW}px`;
+    }
+    if (labelRef.current) {
+      labelRef.current.style.opacity    = "0";
+      labelRef.current.style.transition = "opacity 0.2s ease";
+    }
+
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setIsUnlocked(true);
       setTimeout(() => setShowNotifDot(true), 2000);
     }, 480);
-  }, [isCompleting, setIsUnlocked, setShowNotifDot]);
+  }, [setIsUnlocked, setShowNotifDot]);
 
-  const trackWidth = () =>
-    containerRef.current ? containerRef.current.clientWidth : 320;
-
-  const maxDrag = () => trackWidth() - THUMB_W - PADDING * 2;
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (isCompleting) return;
+  // ── pointer handlers ───────────────────────────────────────────────────
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (completing.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setIsDragging(true);
-  };
+    dragging.current = true;
+  }, []);
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const raw  = e.clientX - rect.left - THUMB_W / 2 - PADDING;
-    const clamped = Math.max(0, Math.min(raw, maxDrag()));
-    setProgress((clamped / maxDrag()) * 100);
-  };
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragging.current || !trackRef.current) return;
+    const rect  = trackRef.current.getBoundingClientRect();
+    const raw   = e.clientX - rect.left - THUMB_W / 2 - PAD;
+    const travel = maxTravel();
+    const clamped = Math.max(0, Math.min(raw, travel));
+    applyProgress(clamped / travel);
+  }, [applyProgress]);
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragging.current) return;
     e.currentTarget.releasePointerCapture(e.pointerId);
-    setIsDragging(false);
-    if (progress >= SLIDE_THRESHOLD) {
+    dragging.current = false;
+
+    if (progress.current >= THRESHOLD) {
       unlock();
     } else {
-      setProgress(0);
+      applyProgress(0, true);   // smooth snap back
     }
-  };
+  }, [applyProgress, unlock]);
 
-  // Thumb offset in px (JS math, not CSS calc on mixed units)
-  const thumbPx = (maxDrag() * progress) / 100;
+  // initialise fill width after mount
+  useEffect(() => {
+    applyProgress(0);
+  }, [applyProgress]);
 
-  // Fill width in px — from PADDING to thumb right edge
-  const fillPx = PADDING + THUMB_W + thumbPx;
-
-  const thumbTransition = isDragging
-    ? "none"
-    : isCompleting
-    ? `transform 0.42s ${SPRING}`
-    : `transform 0.4s ${EASE_OUT}`;
-
-  const fillTransition = isDragging
-    ? "none"
-    : isCompleting
-    ? `width 0.42s ${SPRING}`
-    : `width 0.4s ${EASE_OUT}`;
+  // ── cleanup ────────────────────────────────────────────────────────────
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
 
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-sm px-4">
-      {/* Track — responsive full-width up to max-w-sm */}
+
+      {/* Track */}
       <div
-        ref={containerRef}
-        className="relative w-full h-[64px] bg-slate-900/90 rounded-full flex items-center shadow-inner overflow-hidden select-none"
+        ref={trackRef}
+        className="relative w-full h-[66px] rounded-full select-none overflow-hidden"
+        style={{
+          background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
+          boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04)",
+        }}
       >
-        {/* Animated fill */}
+        {/* Gradient fill */}
         <div
-          className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-emerald-700 via-emerald-500 to-emerald-400"
+          ref={fillRef}
+          className="absolute left-0 top-0 bottom-0 rounded-full"
           style={{
-            width: fillPx,
-            transition: fillTransition,
-            opacity: 0.9,
+            background:
+              "linear-gradient(90deg, #14532d 0%, #15803d 40%, #22c55e 80%, #4ade80 100%)",
+            width: PAD + THUMB_W,   // initial width = just the thumb area
           }}
         />
 
-        {/* Label — fades out as user drags */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* Shimmer stripe over the fill */}
+        <div
+          className="absolute top-0 bottom-0 left-0 w-full rounded-full pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)",
+          }}
+        />
+
+        {/* Label */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <span
-            className="text-emerald-100 font-bold uppercase tracking-widest text-sm z-10"
-            style={{
-              opacity: Math.max(0, 1 - progress / 40),
-              transition: isDragging ? "none" : "opacity 0.2s ease",
-            }}
+            ref={labelRef}
+            className="text-white/60 font-semibold uppercase tracking-[0.22em] text-xs"
           >
             Slide for takeoff
           </span>
@@ -109,31 +178,33 @@ export function SlideToUnlock() {
 
         {/* Thumb */}
         <button
-          className="absolute left-[4px] h-[56px] w-[56px] rounded-full flex items-center justify-center shadow-lg z-20 touch-none focus:outline-none active:scale-95"
+          ref={thumbRef}
+          className="absolute top-[3px] left-[4px] rounded-full flex items-center justify-center z-20 touch-none focus:outline-none"
           style={{
-            background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-            transform: `translateX(${thumbPx}px)`,
-            transition: thumbTransition,
+            width: THUMB_W,
+            height: THUMB_W,
+            background: "linear-gradient(145deg, #4ade80 0%, #16a34a 55%, #14532d 100%)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.15) inset",
           }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           aria-label="Slide to unlock"
         >
+          {/* Plane icon — ref on the inner svg for rotation */}
           <Plane
-            className="text-white w-6 h-6"
-            style={{
-              transform: `rotate(${45 + progress * 0.45}deg)`,
-              transition: isDragging ? "none" : "transform 0.3s ease-out",
-            }}
+            ref={planeRef as React.Ref<SVGSVGElement>}
+            className="text-white w-6 h-6 drop-shadow-sm"
+            style={{ transform: "rotate(45deg)" }}
           />
         </button>
       </div>
 
+      {/* Tap fallback */}
       <button
         onClick={unlock}
-        className="text-emerald-700/50 font-medium text-xs hover:text-emerald-700 transition-colors tracking-wide"
+        className="text-emerald-700/40 font-medium text-xs hover:text-emerald-700 transition-colors tracking-widest uppercase"
       >
         tap to enter
       </button>
