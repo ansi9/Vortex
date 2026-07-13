@@ -1,5 +1,72 @@
-import { useState } from "react";
-import { MapPin, Video, Navigation, AlertTriangle, Footprints } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MapPin, Navigation, AlertTriangle, Footprints, Activity } from "lucide-react";
+
+const STATIONS = [
+  { name: "Central Stn",  base: 72, color: "#f97316" },
+  { name: "Park Ave Hub", base: 38, color: "#22c55e" },
+  { name: "West Terminal",base: 55, color: "#eab308" },
+  { name: "North Metro",  base: 21, color: "#22c55e" },
+];
+
+function TransitPulse() {
+  const [levels, setLevels] = useState(STATIONS.map(s => s.base));
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    tickRef.current = setInterval(() => {
+      setLevels(prev =>
+        prev.map((v, i) => {
+          const drift = (Math.random() - 0.48) * 7;
+          return Math.min(99, Math.max(8, v + drift));
+        })
+      );
+    }, 1800);
+    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, []);
+
+  const barColor = (pct: number) =>
+    pct >= 70 ? "#f97316" : pct >= 45 ? "#eab308" : "#22c55e";
+  const label = (pct: number) =>
+    pct >= 70 ? "High" : pct >= 45 ? "Mod" : "Safe";
+
+  return (
+    <div className="bg-slate-900 rounded-2xl overflow-hidden flex flex-col">
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/80">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <Activity className="w-3.5 h-3.5 text-emerald-400" />
+        <span className="text-white text-xs font-semibold uppercase tracking-wider">
+          Live Transit Pulse
+        </span>
+      </div>
+      <div className="flex-1 px-4 py-3 space-y-2.5">
+        {STATIONS.map((s, i) => {
+          const pct = Math.round(levels[i]);
+          const col = barColor(pct);
+          return (
+            <div key={s.name}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-300 text-xs font-medium">{s.name}</span>
+                <span className="text-xs font-bold" style={{ color: col }}>
+                  {label(pct)} · {pct}%
+                </span>
+              </div>
+              <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${pct}%`,
+                    background: col,
+                    transition: "width 1.6s cubic-bezier(0.4,0,0.2,1), background 1.6s ease",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [origin, setOrigin] = useState("");
@@ -92,21 +159,7 @@ export default function Dashboard() {
             <p className="text-slate-400 text-sm mt-1">Your Area Score</p>
           </div>
 
-          {/* Live Station Cam */}
-          <div className="bg-slate-800 rounded-2xl overflow-hidden flex flex-col">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-900">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-              <span className="text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                <Video className="w-3.5 h-3.5" /> LIVE: Station Cam
-              </span>
-            </div>
-            <div className="flex-1 min-h-[80px] flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-slate-500 border-t-slate-300 rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-slate-500 text-xs">[Camera Feed Loading]</p>
-              </div>
-            </div>
-          </div>
+          <TransitPulse />
         </div>
 
         {/* Route Advisory */}
