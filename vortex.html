@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex Pro | Command Center</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+    <style>
+        :root {
+            --primary: #10b981; --sidebar: #0f172a;
+            --danger: #ef4444; --athena: #f472b6;
+            --voyage: #0ea5e9; --bg: #f1f5f9;
+        }
+        * { box-sizing: border-box; transition: all 0.2s ease; font-family: 'Inter', system-ui, sans-serif; }
+        body { margin: 0; background: var(--bg); height: 100vh; overflow: hidden; display: flex; }
+
+        /* --- 1. LANDING PAGE (Smooth Slider & Logo Fix) --- */
+        #landing-page {
+            position: fixed; inset: 0; background: linear-gradient(135deg, #ecfccb, #dcfce7);
+            z-index: 8000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .logo-container { text-align: center; margin-bottom: 40px; }
+        .logo-text { font-size: 3rem; font-weight: 900; letter-spacing: 8px; color: #1e293b; margin: 0; }
+        
+        .runway {
+            width: 340px; height: 64px; background: #1e293b; border-radius: 32px; padding: 4px; 
+            border: 2px solid #94a3b8; position: relative;
+        }
+        .runway-text { position: absolute; width: 100%; text-align: center; color: #94a3b8; font-weight: 800; top: 22px; font-size: 12px; pointer-events: none; z-index: 1; }
+        /* Smooth Native Slider */
+        input[type="range"] { 
+            -webkit-appearance: none; width: 100%; height: 100%; background: transparent; 
+            cursor: pointer; outline: none; position: relative; z-index: 2; margin: 0;
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 54px; height: 54px; background: var(--primary); 
+            border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='28' height='28' fill='white'%3E%3Cpath d='M20.56 3.91C21.15 4.5 21.15 5.45 20.56 6.03L16.67 9.92L18.79 19.11L17.38 20.53L13.5 13.1L9.6 17L9.96 19.47L8.89 20.53L7.13 17.35L3.94 15.58L5 14.5L7.5 14.87L11.37 11L3.94 7.14L5.36 5.73L14.56 7.84L18.45 3.95C19.03 3.36 19.98 3.36 20.56 3.91Z'/%3E%3C/svg%3E"); 
+            background-repeat: no-repeat; background-position: center; transition: background-color 0.2s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { background-color: #059669; }
+
+        /* --- NAVIGATION --- */
+        nav { width: 280px; background: var(--sidebar); color: white; padding: 25px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+        .nav-item { padding: 15px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 15px; color: #94a3b8; font-weight: 600; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary); }
+        .logo-area { background: white; border-radius: 15px; padding: 15px; margin-bottom: 30px; display: flex; justify-content: center; }
+
+        /* --- MAIN CONTENT --- */
+        main { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
+        .page { display: none; opacity: 0; }
+        .page.active { display: block; opacity: 1; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { transform: translateY(10px); } to { transform: translateY(0); } }
+
+        .card { background: white; border-radius: 20px; padding: 25px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        
+        /* Inputs & Buttons */
+        .input-box { width: 100%; padding: 15px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; margin-bottom: 10px; font-size: 15px; outline: none; }
+        .input-box:focus { border-color: var(--primary); }
+        .btn-primary { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .btn-primary:hover { background: #059669; }
+
+        /* Forecast Chart */
+        .chart-flex { display: flex; align-items: flex-end; height: 180px; gap: 12px; margin: 20px 0; border-bottom: 2px solid #f1f5f9; }
+        .bar { flex: 1; background: #cbd5e1; border-radius: 8px 8px 0 0; position: relative; cursor: pointer; transition: 0.2s; }
+        .bar:hover { filter: brightness(0.9); transform: scaleY(1.02); }
+        .bar.high { background: var(--danger); }
+        .bar.low { background: var(--primary); }
+        .bar-label { position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 11px; color: #64748b; font-weight: bold; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 8px 20px; border-radius: 20px; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-weight: bold; color: #64748b; }
+        .tab.active { background: #1e293b; color: white; border-color: #1e293b; }
+
+        /* --- AIRA AI CHAT --- */
+        #aira-chat { position: fixed; bottom: 30px; right: 30px; width: 380px; height: 500px; background: white; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; display: none; flex-direction: column; z-index: 500; overflow: hidden; }
+        .chat-header { background: #1e293b; color: white; padding: 20px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; font-size: 14px; display: flex; flex-direction: column; gap: 15px; }
+        .msg-aira { background: white; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 0 15px 15px 15px; align-self: flex-start; max-width: 85%; line-height: 1.4; }
+        .msg-user { background: var(--primary); color: white; padding: 12px 16px; border-radius: 15px 0 15px 15px; align-self: flex-end; max-width: 85%; }
+        .chat-chips { display: flex; gap: 10px; overflow-x: auto; padding: 10px 20px; background: white; border-top: 1px solid #f1f5f9; white-space: nowrap; scrollbar-width: none; }
+        .chat-chips::-webkit-scrollbar { display: none; }
+        .chip { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; }
+        .chip:hover { background: #e2e8f0; }
+        .chat-input-area { padding: 15px; border-top: 1px solid #e2e8f0; background: white; display: flex; gap: 10px; }
+        
+        .floating-btn { position: fixed; bottom: 30px; right: 30px; background: #1e293b; color: white; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 499; border: none; transition: transform 0.2s; }
+        .floating-btn:hover { transform: scale(1.05); }
+
+        /* --- SOS OVERLAY (Original/Untouched) --- */
+        #sos-overlay { position: fixed; inset: 0; background: #7f1d1d; z-index: 9000; display: none; flex-direction: column; padding: 50px; color: white; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+    <div id="landing-page">
+        <div class="logo-container">
+            <img src="Vortex_Logo.png" alt="VORTEX" style="height: 100px; display: none;" onload="this.style.display='block'; document.getElementById('logo-fallback').style.display='none';" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+            <h1 id="logo-fallback" class="logo-text">VORTEX PRO</h1>
+        </div>
+        
+        <div class="runway">
+            <div class="runway-text">SLIDE TO ACTIVATE</div>
+            <input type="range" min="0" max="100" value="0" oninput="checkUnlock(this.value)">
+        </div>
+    </div>
+
+    <nav>
+        <div class="logo-area">
+            <h2 style="margin:0; color: var(--sidebar); letter-spacing: 2px;">VORTEX</h2>
+        </div>
+        <div class="nav-item active" onclick="nav('dash', this)"><i data-lucide="layout"></i> Dashboard</div>
+        <div class="nav-item" onclick="nav('forecast', this)"><i data-lucide="bar-chart-2"></i> Crowd Forecast</div>
+        <div class="nav-item" onclick="nav('voyage', this)"><i data-lucide="camera"></i> Vortex Voyage</div>
+        <div class="nav-item" style="color: var(--athena);" onclick="nav('athena', this)"><i data-lucide="shield"></i> Athena Shield</div>
+        <div class="nav-item" onclick="nav('map', this)"><i data-lucide="map-pin"></i> Live Map</div>
+        
+        <div class="nav-item" style="background: var(--danger); color: white; margin-top: auto; justify-content: center;" onclick="toggleSOS(true)">
+            <i data-lucide="zap"></i> I'M STUCK
+        </div>
+    </nav>
+
+    <main>
+        <div id="dash" class="page active">
+            <h1>Command Overview</h1>
+            
+            <div class="card" style="background: #1e293b; color: white;">
+                <h3 style="margin-top:0;">Plan Safe Route</h3>
+                <div class="grid-2">
+                    <input type="text" class="input-box" placeholder="📍 Current Location (e.g., Central Park)" id="loc-start">
+                    <input type="text" class="input-box" placeholder="🎯 Destination (e.g., Times Square)" id="loc-end">
+                </div>
+                <button class="btn-primary" onclick="generateRoute()">Analyze Crowd & Routing</button>
+            </div>
+
+            <div id="route-results" style="display: none;">
+                <div class="card" style="border-left: 5px solid var(--primary);">
+                    <h3 style="margin-top:0;">Optimal Transport Plan</h3>
+                    <p><b>Crowd Highlights in Region:</b> 5th Avenue is currently experiencing heavy foot traffic (85% dense) due to a parade. Subway lines N, Q, R are delayed.</p>
+                    <div class="grid-3" style="margin-top: 15px;">
+                        <div style="background: #f0fdf4; padding: 15px; border-radius: 12px; border: 1px solid #bbf7d0;">
+                            <i data-lucide="bus" color="var(--primary)"></i>
+                            <h4 style="margin: 5px 0;">Best Mode: Bus M20</h4>
+                            <p style="font-size: 12px; margin:0;">Light crowds. 24 min ETA.</p>
+                        </div>
+                        <div style="background: #fef2f2; padding: 15px; border-radius: 12px; border: 1px solid #fecaca;">
+                            <i data-lucide="train" color="var(--danger)"></i>
+                            <h4 style="margin: 5px 0;">Avoid: Subway</h4>
+                            <p style="font-size: 12px; margin:0;">Severe crushing reported.</p>
+                        </div>
+                        <div style="background: #e0f2fe; padding: 15px; border-radius: 12px; border: 1px solid #bae6fd;">
+                            <i data-lucide="footprints" color="#0ea5e9"></i>
+                            <h4 style="margin: 5px 0;">Walk Score: 60%</h4>
+                            <p style="font-size: 12px; margin:0;">Safe, but heavy rain soon.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div class="card"><i data-lucide="users" color="#10b981"></i><h3 style="color: #10b981;">14% City Load</h3><p style="color:#64748b; font-size: 14px;">Overall Status: Safe</p></div>
+                <div class="card"><i data-lucide="activity" color="#f59e0b"></i><h3>98% Safety</h3><p style="color:#64748b; font-size: 14px;">Your Area Score</p></div>
+                <div class="card" style="padding: 0; overflow: hidden;"><div style="padding: 15px; background: #1e293b; color: white; font-size: 12px; font-weight: bold;">📷 LIVE: Station Cam</div><div style="height: 100px; background: #cbd5e1; display: flex; align-items: center; justify-content: center; color: #64748b;">[Camera Feed Loading]</div></div>
+            </div>
+        </div>
+
+        <div id="forecast" class="page">
+            <div style="display:flex; justify-content:space-between; align-items: center;">
+                <h1>Crowd Forecast</h1>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchDay(this, 'today')">Today</div>
+                    <div class="tab" onclick="switchDay(this, 'tomorrow')">Tomorrow</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="chart-flex" id="forecast-chart">
+                    <div class="bar low" style="height: 25%;" onclick="showBarData('12 PM', '25%', 'Smooth flowing. High visibility.')"><span class="bar-label">12 PM</span></div>
+                    <div class="bar low" style="height: 40%;" onclick="showBarData('2 PM', '40%', 'Moderate crowds. Good time to travel.')"><span class="bar-label">2 PM</span></div>
+                    <div class="bar" style="height: 65%; background:#fcd34d;" onclick="showBarData('4 PM', '65%', 'Stations filling up. Expect minor delays.')"><span class="bar-label">4 PM</span></div>
+                    <div class="bar high" style="height: 100%;" onclick="showBarData('5 PM', '98%', 'SURGE WARNING: Severe crushing likely.')"><span class="bar-label">5 PM</span></div>
+                    <div class="bar high" style="height: 80%;" onclick="showBarData('8 PM', '80%', 'Crowds dispersing slowly.')"><span class="bar-label">8 PM</span></div>
+                    <div class="bar low" style="height: 30%;" onclick="showBarData('10 PM', '30%', 'Quiet. Use well-lit exits.')"><span class="bar-label">10 PM</span></div>
+                </div>
+                <div id="bar-details" style="background:#f8fafc; padding:15px; border-radius:10px; border: 1px solid #e2e8f0; margin-top: 30px; font-size: 14px; text-align: center; color: #64748b;">
+                    <i>Click on any time interval above to see specific crowd details.</i>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Area Disruptions</h3>
+            <div class="grid-3">
+                <div class="card" style="border-left: 4px solid #3b82f6;"><h4 style="margin:0 0 5px 0; color:#3b82f6;">🌧️ Rain Forecast</h4><p style="margin:0; font-size:12px; color:#64748b;">Heavy downpour expected at 4:30 PM. Expect sudden surges in underground stations.</p></div>
+                <div class="card" style="border-left: 4px solid #f59e0b;"><h4 style="margin:0 0 5px 0; color:#f59e0b;">🚧 Construction</h4><p style="margin:0; font-size:12px; color:#64748b;">North Gate exit closed. Bottleneck likely at East Gate during rush hour.</p></div>
+                <div class="card" style="border-left: 4px solid var(--danger);"><h4 style="margin:0 0 5px 0; color:var(--danger);">⚠️ Accident Prone</h4><p style="margin:0; font-size:12px; color:#64748b;">Intersection of 5th & Main has poor lighting tonight. Route adjusted to avoid.</p></div>
+            </div>
+        </div>
+
+        <div id="voyage" class="page">
+            <h1 style="color: var(--voyage);">Vortex Voyage</h1>
+            <p style="color: #64748b;">Curate safe, cinematic, and aesthetic itineraries for your day out.</p>
+            
+            <div class="card" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: none;">
+                <input type="text" class="input-box" style="border:none; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" placeholder="Where is the squad heading?">
+                <div class="grid-2" style="margin-top: 10px;">
+                    <select class="input-box" style="border:none;"><option>Vibe: Café Hopper & Photos</option><option>Vibe: Urban Cinematic Night</option></select>
+                    <select class="input-box" style="border:none;"><option>Priority: Highly Saveable Routes</option><option>Priority: Cleanest Washrooms Only</option></select>
+                </div>
+                <button class="btn-primary" style="background: var(--voyage); margin-top: 10px;" onclick="document.getElementById('reel-itinerary').style.display='block'">Generate Aesthetic Itinerary</button>
+            </div>
+
+            <div id="reel-itinerary" style="display: none;">
+                <h3>Your Curated Path</h3>
+                <div class="card" style="display: flex; gap: 20px; align-items: center; border-left: 4px solid var(--voyage);">
+                    <div style="background: #bae6fd; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i data-lucide="camera" color="#0284c7"></i></div>
+                    <div>
+                        <h4 style="margin: 0 0 5px 0;">1. The Glass Pavilion (4:00 PM)</h4>
+                        <p style="margin: 0; font-size: 13px; color: #64748b;">Perfect natural lighting. <span style="color:var(--primary); font-weight:bold;">✓ 5-Star Clean Washrooms verified nearby.</span></p>
+                    </div>
+                </div>
+                <div class="card" style="display: flex; gap: 20px; align-items: center; border-left: 4px solid var(--athena);">
+                    <div style="background: #fbcfe8; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i data-lucide="coffee" color="#db2777"></i></div>
+                    <div>
+                        <h4 style="margin: 0 0 5px 0;">2. Neon Alley Café (6:30 PM)</h4>
+                        <p style="margin: 0; font-size: 13px; color: #64748b;">High foot-traffic (safe). Cinematic backdrop. <span style="color:var(--primary); font-weight:bold;">✓ Route fully lit.</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="athena" class="page">
+            <h1 style="color: var(--athena);">Athena Shield</h1>
+            <div style="background: #1e293b; padding: 25px; border-radius: 20px; color: white; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin:0 0 5px 0;">Women's Safety Index</h2>
+                    <p style="margin:0; color: #94a3b8;">Current Region: Downtown</p>
+                </div>
+                <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary);">88<span style="font-size: 1rem; color: #94a3b8;">/100</span></div>
+            </div>
+
+            <h3>Immediate Safe Havens & Utilities</h3>
+            <div class="grid-4">
+                <div class="card" style="text-align:center; padding: 15px; cursor: pointer; border-color: #fbcfe8;" onclick="alert('Map updated with verified clean washrooms stocking sanitary pads.')">
+                    <i data-lucide="droplets" color="var(--athena)" style="margin-bottom: 10px;"></i><br><span style="font-size: 12px; font-weight:bold;">Pads & Washrooms</span>
+                </div>
+                <div class="card" style="text-align:center; padding: 15px; cursor: pointer; border-color: #fbcfe8;" onclick="alert('Routing to nearest open 24/7 Clinic...')">
+                    <i data-lucide="cross" color="var(--athena)" style="margin-bottom: 10px;"></i><br><span style="font-size: 12px; font-weight:bold;">Nearby Clinics</span>
+                </div>
+                <div class="card" style="text-align:center; padding: 15px; cursor: pointer; border-color: #fbcfe8;" onclick="alert('Showing police stations, 24/7 cafes, and crowded safe zones.')">
+                    <i data-lucide="map-pin" color="var(--athena)" style="margin-bottom: 10px;"></i><br><span style="font-size: 12px; font-weight:bold;">Safe Zones</span>
+                </div>
+                <div class="card" style="text-align:center; padding: 15px; cursor: pointer; background: #fef2f2; border-color: var(--danger);" onclick="alert('Dialing local Women\'s Emergency Helpline...')">
+                    <i data-lucide="phone-call" color="var(--danger)" style="margin-bottom: 10px;"></i><br><span style="font-size: 12px; font-weight:bold; color: var(--danger);">Helpline</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="map" class="page">
+            <div style="display:flex; justify-content:space-between; align-items: center; margin-bottom: 15px;">
+                <h1 style="margin:0;">Live City Map</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button style="padding: 8px 15px; border-radius: 20px; border: 1px solid #cbd5e1; background: white; font-size: 12px; cursor: pointer;">🔴 Crowd Pins</button>
+                    <button style="padding: 8px 15px; border-radius: 20px; border: 1px solid #cbd5e1; background: white; font-size: 12px; cursor: pointer;">🟢 Safe Zones</button>
+                </div>
+            </div>
+            <div style="height: 500px; background: #cbd5e1; border-radius: 20px; background-image: radial-gradient(#94a3b8 2px, transparent 2px); background-size: 30px 30px; position: relative;">
+                <div style="position: absolute; top: 30%; left: 40%; background: #fff; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid var(--danger); color: var(--danger);">⚠️ Escalator Broken</div>
+                <div style="position: absolute; top: 60%; left: 70%; background: #fff; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid var(--primary); color: var(--primary);">🏥 Open Clinic</div>
+            </div>
+        </div>
+    </main>
+
+    <button class="floating-btn" onclick="toggleAira()"><i data-lucide="bot" size="30"></i></button>
+    <div id="aira-chat">
+        <div class="chat-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 30px; height: 30px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="bot" size="18"></i></div>
+                <span>Aira Assistant</span>
+            </div>
+            <button onclick="toggleAira()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x"></i></button>
+        </div>
+        
+        <div class="chat-body" id="aira-body">
+            <div class="msg-aira">Hi! I'm Aira. I can help you analyze crowd safety, build a trip bucketlist, or find safe amenities nearby. How can I help?</div>
+        </div>
+
+        <div class="chat-chips">
+            <div class="chip" onclick="sendToAira('Help me build a safe Bucketlist for today.')">📋 Build Bucketlist</div>
+            <div class="chip" onclick="sendToAira('Is the downtown area safe right now?')">🛡️ Check Safety</div>
+            <div class="chip" onclick="sendToAira('Where is the nearest pharmacy?')">🏥 Find Pharmacy</div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="aira-input" placeholder="Message Aira..." style="width: 100%; border: none; outline: none; background: #f1f5f9; padding: 10px 15px; border-radius: 20px;">
+            <button onclick="handleManualChat()" style="background: var(--primary); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="send" size="16"></i></button>
+        </div>
+    </div>
+
+    <div id="sos-overlay">
+        <div>
+            <h1 style="font-size: 4rem; margin:0; animation: pulse 1s infinite;">🚨 SOS ACTIVE</h1>
+            <p style="font-size: 1.5rem; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 20px;">Broadcasting Live GPS & Audio to 4 Contacts...</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px;">
+            <div style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); padding: 30px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="alert('Dialing Police')"><h2>Call Police</h2></div>
+            <div style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); padding: 30px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="alert('Siren Active')"><h2>Loud Siren</h2></div>
+        </div>
+
+        <button onclick="toggleSOS(false)" style="background:white; color:#7f1d1d; border:none; padding:25px; border-radius:30px; font-weight:bold; font-size: 1.5rem; cursor: pointer; width: 100%;">CANCEL (I AM SAFE)</button>
+    </div>
+
+    <style>
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });
+
+        // Smooth Landing Page Slider
+        function checkUnlock(val) {
+            if(val > 90) {
+                document.getElementById('landing-page').style.opacity = '0';
+                setTimeout(() => { document.getElementById('landing-page').style.display = 'none'; }, 300);
+            }
+        }
+
+        // Navigation
+        function nav(pageId, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            lucide.createIcons();
+        }
+
+        // Dashboard Route Plan Reveal
+        function generateRoute() {
+            const start = document.getElementById('loc-start').value;
+            const end = document.getElementById('loc-end').value;
+            if(!start || !end) { alert("Please enter both location and destination."); return; }
+            document.getElementById('route-results').style.display = 'block';
+        }
+
+        // Forecast Chart Interactions
+        function switchDay(btn, day) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('bar-details').innerHTML = `<i>Showing forecast data for <b>${day.toUpperCase()}</b>. Click a bar for details.</i>`;
+        }
+
+        function showBarData(time, density, note) {
+            document.getElementById('bar-details').innerHTML = `<b>${time}:</b> Density at ${density}. <br> <span style="color: var(--primary);">${note}</span>`;
+        }
+
+        // Aira AI Chat Logic
+        function toggleAira() {
+            const chat = document.getElementById('aira-chat');
+            chat.style.display = chat.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function sendToAira(text) {
+            const body = document.getElementById('aira-body');
+            // Add User Message
+            body.innerHTML += `<div class="msg-user">${text}</div>`;
+            body.scrollTop = body.scrollHeight;
+
+            // Simulate Aira Thinking & Responding
+            setTimeout(() => {
+                let reply = "I can certainly help with that. Analyzing data now...";
+                if(text.includes('Bucketlist')) reply = "Let's build a safe itinerary! Since you like aesthetic spots, I suggest 'The Glass Pavilion' at 4 PM (lowest crowd density) followed by 'Neon Alley Café'. Shall I map the safest walking route between them?";
+                if(text.includes('safe')) reply = "The downtown area currently has an 88/100 Safety Index. Crowds are moderate (40%). It is safe, but I recommend avoiding the North Gate exit due to construction.";
+                if(text.includes('pharmacy')) reply = "There is a verified 24/7 CVS Pharmacy 0.3 miles away on 5th Ave. The walking route is fully lit. I've pinned it on your map.";
+
+                body.innerHTML += `<div class="msg-aira">${reply}</div>`;
+                body.scrollTop = body.scrollHeight;
+            }, 800);
+        }
+
+        function handleManualChat() {
+            const input = document.getElementById('aira-input');
+            if(input.value.trim() !== '') {
+                sendToAira(input.value);
+                input.value = '';
+            }
+        }
+
+        // SOS Toggle (Untouched Original)
+        function toggleSOS(state) { 
+            document.getElementById('sos-overlay').style.display = state ? 'flex' : 'none'; 
+        }
+    </script>
+</body>
+</html>
