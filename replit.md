@@ -1,45 +1,84 @@
-# [Project name]
+# Vortex Pro — Safe Transit
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+**PREDICT. PREVENT. PROTECT.**
 
-## Run & Operate
+Vortex Pro is a safety-first transit companion app that helps commuters avoid crowded, high-risk areas and get help fast in an emergency. It combines live crowd forecasting, an interactive congestion map, an AI-powered trip assistant, and a one-tap SOS mode into a single, polished mobile-first web app.
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+## Features
 
-## Stack
+- **Landing experience** — branded splash screen with a slide-to-unlock control (with a fallback button) that transitions into the app.
+- **Dashboard** — at-a-glance status header with summary cards for next arrival, crowd level, and safety score, plus a quick-route advisory.
+- **Crowd Forecast** — animated bar chart of station density by hour, with a Today/Tomorrow toggle and smart tips.
+- **Live Map** — stylized map with tappable congestion markers (high = avoid, low = safe) and area details.
+- **AI Trip Assistant** — floating chat assistant that generates a tailored safety checklist based on trip length.
+- **SOS mode** — full-screen emergency overlay with live location broadcasting, nearest safe-zone navigation, and quick actions (call police, medical, alert parents, record audio).
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+> Note: transit data, live geolocation, and SOS dispatch are simulated/mocked — there's no real backend integration for these yet.
 
-## Where things live
+## Tech Stack
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- **Monorepo:** pnpm workspaces, Node.js 24, TypeScript 5.9
+- **Frontend:** React 19, Vite, Tailwind CSS 4, shadcn/ui, Radix UI, Framer Motion, wouter (routing), TanStack Query
+- **Backend:** Express 5, Pino (logging)
+- **Database:** PostgreSQL + Drizzle ORM
+- **Validation / API contracts:** Zod, Orval (OpenAPI codegen)
+- **Build:** esbuild
 
-## Architecture decisions
+## Project Structure
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+```
+artifacts/
+  vortex-pro/       # Main React frontend (the app itself)
+  api-server/        # Express API server
+  mockup-sandbox/    # Component/mockup preview sandbox
+lib/
+  api-zod/            # Generated Zod schemas from API spec
+  api-client-react/   # Generated React Query hooks
+  api-spec/           # OpenAPI spec (source of truth for API contracts)
+  db/                  # Drizzle ORM schema and DB package
+scripts/               # Workspace utility scripts
+```
 
-## Product
+## Getting Started
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+### Prerequisites
+- Node.js 24
+- pnpm
+- A PostgreSQL database
 
-## User preferences
+### Install
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+```bash
+pnpm install
+```
 
-## Gotchas
+### Environment
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+Set the following environment variable before running the API server:
 
-## Pointers
+```
+DATABASE_URL=<your-postgres-connection-string>
+```
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+### Run
+
+```bash
+# Run the API server (port 5000)
+pnpm --filter @workspace/api-server run dev
+
+# Run the frontend
+pnpm --filter @workspace/vortex-pro run dev
+```
+
+### Other useful commands
+
+```bash
+pnpm run typecheck                                   # typecheck all packages
+pnpm run build                                        # typecheck + build all packages
+pnpm --filter @workspace/api-spec run codegen          # regenerate API hooks + Zod schemas from OpenAPI spec
+pnpm --filter @workspace/db run push                   # push DB schema changes (dev only)
+```
+
+## License
+
+MIT
